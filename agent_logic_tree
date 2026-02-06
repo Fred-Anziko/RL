@@ -2,23 +2,23 @@
 digraph {
 	rankdir=TB
 	0 [label="Node 0
-P(Right): 0.72" fillcolor="#46b888" fontcolor=white shape=box style=filled]
-	0 -> 1 [label=L penwidth=2.1023495197296143]
-	0 -> 2 [label=R penwidth=3.8976504802703857]
+P(Right): 0.80" fillcolor="#32cc88" fontcolor=white shape=box style=filled]
+	0 -> 1 [label=L penwidth=1.786576271057129]
+	0 -> 2 [label=R penwidth=4.213423728942871]
 	1 [label="Node 1
-P(Right): 0.38" fillcolor="#9d6188" fontcolor=white shape=box style=filled]
-	1 -> 3 [label=L penwidth=3.463229179382324]
-	1 -> 4 [label=R penwidth=2.536770820617676]
+P(Right): 0.70" fillcolor="#4db188" fontcolor=white shape=box style=filled]
+	1 -> 3 [label=L penwidth=2.214106559753418]
+	1 -> 4 [label=R penwidth=3.785893440246582]
 	2 [label="Node 2
-P(Right): 0.25" fillcolor="#be4088" fontcolor=white shape=box style=filled]
-	2 -> 5 [label=L penwidth=3.9867111444473267]
-	2 -> 6 [label=R penwidth=2.0132888555526733]
+P(Right): 0.89" fillcolor="#1ae488" fontcolor=white shape=box style=filled]
+	2 -> 5 [label=L penwidth=1.4203259944915771]
+	2 -> 6 [label=R penwidth=4.579674005508423]
 	3 [label="Node 3
-P(Right): 0.66" fillcolor="#56a888" fontcolor=white shape=box style=filled]
+P(Right): 0.31" fillcolor="#b04e88" fontcolor=white shape=box style=filled]
 	4 [label="Node 4
-P(Right): 0.59" fillcolor="#689688" fontcolor=white shape=box style=filled]
+P(Right): 0.84" fillcolor="#28d688" fontcolor=white shape=box style=filled]
 	5 [label="Node 5
-P(Right): 0.56" fillcolor="#6f8f88" fontcolor=white shape=box style=filled]
+P(Right): 0.43" fillcolor="#906e88" fontcolor=white shape=box style=filled]
 	6 [label="Node 6
-P(Right): 0.61" fillcolor="#639b88" fontcolor=white shape=box style=filled]
+P(Right): 0.85" fillcolor="#26d888" fontcolor=white shape=box style=filled]
 }
