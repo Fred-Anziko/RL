@@ -46,7 +46,7 @@ It is a "full-stack" neural brain designed to be dropped into an unknown environ
 🛠 Tools
 - **Neural Debugger:** A Streamlit-based dashboard for visualizing logic paths and "surgical pruning" of decision nodes.
 - **Inference API:** A FastAPI service for serving the agent with background online learning.
-'''
-python3 -c "import requests; r = requests.post('http://localhost:8000/predict', json={'state': [0.1]*376, 'rtg': 10.0, 'session_id': 'test_session'}); print(r.json())"
-'''
+
+Example usage:
+''' python3 -c "import requests; r = requests.post('http://localhost:8000/predict', json={'state': [0.1]*376, 'rtg': 10.0, 'session_id': 'test_session'}); print(r.json())" '''
 
