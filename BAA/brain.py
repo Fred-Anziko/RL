@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 import random
-from .loss import DTTLossEngine
-from .curiosity import CuriosityEngine
+from BAA.loss import DTTLossEngine
+from BAA.curiosity import CuriosityEngine
 
 class AgenticBrain:
     """

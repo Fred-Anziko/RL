@@ -1,7 +1,6 @@
 import torch.nn as nn
-from .ddt import SoftDecisionTree
-
-from .rope import RotaryMultiheadAttention
+from BAA.ddt import SoftDecisionTree
+from BAA.rope import RotaryMultiheadAttention
 
 class TreeTransformerBlock(nn.Module):
     """

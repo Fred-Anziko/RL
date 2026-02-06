@@ -1,9 +1,14 @@
 import os
+import sys
+
+# Ensure the parent directory is in the path for absolute imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import torch
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from .baa_interface import BAAAgent
+from BAA.baa_interface import BAAAgent
 
 app = FastAPI()
 
@@ -16,8 +21,8 @@ class Observation(BaseModel):
 
 # Task-specific config moved to environment variables or a config file
 agent = BAAAgent(
-    state_dim=int(os.getenv("STATE_DIM", 16)), 
-    action_dim=int(os.getenv("ACTION_DIM", 4))
+    state_dim=int(os.getenv("STATE_DIM", 376)), 
+    action_dim=int(os.getenv("ACTION_DIM", 17))
 )
 
 @app.post("/predict")

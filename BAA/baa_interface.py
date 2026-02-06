@@ -2,8 +2,8 @@ import torch
 import os
 import numpy as np
 import threading 
-from .orchestrator import AgenticDTT
-from .brain import AgenticBrain
+from BAA.orchestrator import AgenticDTT
+from BAA.brain import AgenticBrain
 
 class BAAAgent:
     def __init__(self, state_dim, action_dim, weight_path="baa_weights.pt", lr=1e-3):

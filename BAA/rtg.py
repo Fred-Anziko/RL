@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .bayesian import BayesianLinear
+from BAA.bayesian import BayesianLinear
 
 class RTGAwareRouter(nn.Module):
     """ A router that conditions splits on both state embeddings and RTG values. 

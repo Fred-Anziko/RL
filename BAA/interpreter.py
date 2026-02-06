@@ -3,7 +3,12 @@ import graphviz
 import torch
 import numpy as np
 import os
-from .orchestrator import AgenticDTT
+import sys
+
+# Ensure the parent directory is in the path for absolute imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from BAA.orchestrator import AgenticDTT
 
 # --- 1. Live Data Connection ---
 def get_decision_trace(model, states, rtg, layer_idx=0):
@@ -43,7 +48,12 @@ def render_decision_tree(trace, depth=3):
     if trace is None:
         return None
         
-    dot = graphviz.Digraph(comment='Agentic Logic Tree')
+    try:
+        dot = graphviz.Digraph(comment='Agentic Logic Tree')
+    except Exception:
+        st.error("❌ Graphviz 'dot' executable not found. Please install it (e.g., `brew install graphviz`).")
+        return None
+        
     dot.attr(rankdir='TB')
     
     num_nodes = 2**depth - 1
@@ -76,7 +86,7 @@ def render_decision_tree(trace, depth=3):
 
 def load_live_model(checkpoint_path="humanoid_model.pt"):
     # Default dimensions (can be overridden by checkpoint)
-    state_dim = 348 
+    state_dim = 376 
     action_dim = 17
     
     if os.path.exists(checkpoint_path):
@@ -91,11 +101,39 @@ def load_live_model(checkpoint_path="humanoid_model.pt"):
                 action_dim = state_dict['policy_head.weight'].shape[0]
                 
             model = AgenticDTT(state_dim=state_dim, action_dim=action_dim, embed_dim=256, n_layers=6)
-            model.load_state_dict(state_dict)
-            print(f"✓ Loaded weights from {checkpoint_path} (Detected State Dim: {state_dim})")
+            
+            # --- Smart Legacy Mapping (Synced with baa_interface.py) ---
+            current_model_dict = model.state_dict()
+            adapted_dict = {}
+            for key, value in state_dict.items():
+                if key in current_model_dict:
+                    adapted_dict[key] = value
+                elif "in_proj_weight" in key:
+                    prefix = key.replace(".in_proj_weight", "")
+                    if f"{prefix}.q_proj.weight" in current_model_dict:
+                        embed_dim = value.shape[1]
+                        q_w, k_w, v_w = value.split(embed_dim, dim=0)
+                        adapted_dict[f"{prefix}.q_proj.weight"] = q_w
+                        adapted_dict[f"{prefix}.k_proj.weight"] = k_w
+                        adapted_dict[f"{prefix}.v_proj.weight"] = v_w
+                elif "in_proj_bias" in key:
+                    prefix = key.replace(".in_proj_bias", "")
+                    if f"{prefix}.q_proj.bias" in current_model_dict:
+                        embed_dim = value.shape[0] // 3
+                        q_b, k_b, v_b = value.split(embed_dim, dim=0)
+                        adapted_dict[f"{prefix}.q_proj.bias"] = q_b
+                        adapted_dict[f"{prefix}.k_proj.bias"] = k_b
+                        adapted_dict[f"{prefix}.v_proj.bias"] = v_b
+                else:
+                    mu_key = key.replace(".weight", ".weight_mu").replace(".bias", ".bias_mu")
+                    if mu_key in current_model_dict:
+                        adapted_dict[mu_key] = value
+
+            model.load_state_dict(adapted_dict, strict=False)
+            print(f"✓ Loaded and adapted weights from {checkpoint_path} (Detected State Dim: {state_dim})")
             return model, state_dim
         except Exception as e:
-            print(f"Failed to load weights: {e}")
+            print(f"⚠️  Failed to load weights: {e}")
     
     # Fallback to random weights if no checkpoint found or load failed
     model = AgenticDTT(state_dim=state_dim, action_dim=action_dim, embed_dim=256, n_layers=6)
@@ -136,7 +174,7 @@ def run_ui():
         graph = render_decision_tree(active_trace)
         
         if graph:
-            st.graphviz_chart(graph, use_container_width=True)
+            st.graphviz_chart(graph, width='stretch')
         
         if active_trace:
             probs = np.array([v['go_right_prob'] for v in active_trace.values()])

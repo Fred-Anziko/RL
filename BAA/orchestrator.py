@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 import random
-from .ffn import TreeTransformerBlock
-from .hindsight import HindsightRelabeler
+from BAA.ffn import TreeTransformerBlock
+from BAA.hindsight import HindsightRelabeler
 
 class ReplayBuffer:
     """ Experience Replay Buffer for storing and sampling agent experiences.

@@ -8,11 +8,11 @@ from BAA.interpreter import get_decision_trace, render_decision_tree
 # 1. Setup Environment (Infinite Life Mode)
 # terminate_when_unhealthy=False: prevents the env from stopping when the agent falls
 # terminate_when_unhealthy=False: prevents the env from stopping when the agent falls
-env = gym.make("Humanoid-v5", render_mode="human", terminate_when_unhealthy=False)
+env = gym.make("Humanoid-v4", render_mode="human", terminate_when_unhealthy=False)
 
 # 2. Initialize the Unified Agent
 agent = BAAAgent(
-    state_dim=348, 
+    state_dim=376, 
     action_dim=17, 
     weight_path="humanoid_model.pt"
 )

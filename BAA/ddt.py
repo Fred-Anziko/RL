@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .bayesian import BayesianLinear
+from BAA.bayesian import BayesianLinear
 import torch.nn.functional as F
 
 class SoftDecisionTree(nn.Module):
