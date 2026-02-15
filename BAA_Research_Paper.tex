@@ -42,7 +42,7 @@
 \begin{abstract}
 We introduce the \textbf{Branching-Attention Agent (BAA)}, a hybrid neural architecture that combines Transformer-style sequence modeling with the interpretability of differentiable soft decision trees. BAA exposes explicit routing traces through its decision process while remaining end-to-end differentiable.
 
-The approach integrates five components: (1) Tree--Transformer blocks with functional gated leaves (a soft hierarchical mixture of experts), (2) Bayesian linear layers for epistemic uncertainty estimation, (3) curiosity-driven exploration based on routing entropy and Bayesian KL divergence, (4) hindsight experience replay for return relabeling, and (5) Rotary Positional Embeddings (RoPE) leveraging Euler's formula for infinite-horizon generalization. Experiments on continuous-control tasks suggest that BAA can match strong baselines while producing human-readable decision paths that support debugging and safety interventions via \emph{surgical pruning}.
+The approach is simple, Percieve, Reason and Act. This integrates five components: (1) Rotary Positional Embeddings (RoPE) leveraging Euler's formula for infinite-horizon generalization, (2) Tree--Transformer blocks with functional gated leaves (a soft hierarchical mixture of experts), (3) Bayesian linear layers for epistemic uncertainty estimation, (4) curiosity-driven exploration based on routing entropy and Bayesian KL divergence and (5) hindsight experience replay for return relabeling. Experiments on continuous-control tasks suggest that BAA can match strong baselines while producing human-readable decision paths that support debugging and safety interventions via \emph{surgical pruning}.
 \end{abstract}
 
 \section{Introduction}
@@ -105,23 +105,20 @@ BAA consists of an embedding layer, a stack of Tree--Transformer blocks, and tas
 
 % Arrows
 \draw [arrow] (input) -- (embed);
-\draw [arrow] (embed) -- (attn);
-\draw [arrow] (rope) |- (attn);
+\draw [arrow] (embed) -- (rope);
+\draw [arrow] (rope) -- (attn);
 \draw [arrow] (attn) -- (tree);
 \draw [arrow] (tree) -- (heads);
 
 % Dashed line for trace
 \draw [arrow, dashed, thick, color=red] (tree) -- node[above, font=\footnotesize, color=red] {Routing Trace} (trace);
 
-% Feedback loop to heads? Or from trace to loss?
-% Let's keep it simple. curiosity adds to loss/reward.
 
 \end{tikzpicture}
 \caption{The BAA Architecture. The standard MLP is replaced by a Differentiable Soft Decision Tree. RoPE encodes relative positions for infinite-horizon support, and the Curiosity Engine consumes routing traces to generate intrinsic rewards.}
 \label{fig:architecture}
 \end{figure}
 
-% Diagram placeholder removed. See figure below.
 
 \subsection{Tree--Transformer hybrid block}
 Each block augments attention with a soft decision tree in place of the usual feed-forward MLP:
@@ -315,9 +312,6 @@ To verify the efficacy of the Rotary Positional Embeddings, we visualized the at
     \item \textbf{Relative Decay:} Attention heatmaps exhibit clear diagonal banding, confirming that the model learns to attend based on relative distance ($t-k$) rather than absolute step indices.
     \item \textbf{Infinite Horizon:} This structure allows the agent to maintain stable performance even when episode lengths exceed the training context window, treating step 1,000,000 identically to step 100 locally.
 \end{itemize}
-
-\paragraph{Note on figures.}
-The original Markdown included an image path pointing to a local machine directory; this is not portable in Prism and was omitted. If you upload a figure (e.g., \texttt{entropy\_plot.png}) into the project, we can include it with \texttt{\\includegraphics}.
 
 \section{Theoretical analysis}\label{sec:theory}
 \subsection{Expressiveness}
