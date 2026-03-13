@@ -49,6 +49,11 @@ args = "uvicorn BAA.app:app --host localhost --port 8000"
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8000
+externalPort = 8000
+exposeLocalhost = true
+
 [deployment]
 deploymentTarget = "vm"
 run = ["bash", "-c", "uvicorn BAA.app:app --host localhost --port 8000 & streamlit run BAA/interpreter.py --server.port 5000 --server.address 0.0.0.0 --server.headless true --server.enableCORS false --server.enableXsrfProtection false"]
