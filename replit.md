@@ -12,7 +12,7 @@ The BAA is a unified ML framework combining Transformers with Differentiable Sof
 - **Backend (FastAPI)**: Inference and online learning API at port 8000 — `BAA/app.py`
 
 ### Key Modules (`BAA/`)
-- `orchestrator.py` — AgenticDTT model, ReplayBuffer
+- `orchestrator.py` — AgenticDTT model, PrioritizedSequenceReplayBuffer, RoutingTracker
 - `brain.py` — AgenticBrain (action selection, training loop)
 - `baa_interface.py` — BAAAgent (high-level interface with thread safety)
 - `interpreter.py` — Streamlit Neural Debugger UI
@@ -43,21 +43,33 @@ python3 -c "import requests; r = requests.post('http://localhost:8000/predict', 
 
 ## Recent Improvements
 
-### 1. Real Hindsight Experience Replay (`BAA/hindsight.py`)
-`HindsightRelabeler.relabel_episode()` now returns a **list of two samples** per episode:
-- **Original sample**: trajectory with the agent's intended RTG goal.
-- **Hindsight sample**: the same trajectory relabeled so the RTG at every step is rescaled as if the agent always intended to reach the actual final outcome (`override_total`). This turns failed episodes into valid "virtual successes" for a different target, which is the core HER re-goal operation.
-`orchestrator.on_episode_finish()` pushes both samples to the replay buffer.
+### 1. RTG Clamping in Hindsight Relabeling (`BAA/hindsight.py`)
+`compute_rtg()` now clamps all RTG values to `[-100, 100]` after the hindsight rescaling step. This prevents near-zero episode totals from producing enormous scale factors that would destabilize cross-attention layers during training.
 
-### 2. Learned Loss Balancing (`BAA/loss.py`)
-Replaced all hand-tuned static weights with **uncertainty weighting** (Kendall et al. 2018). `DTTLossEngine` now has 6 learnable `log_sigma` parameters (one per loss component). Effective weight for each loss is `1 / (2 * σ²)` plus a regularizer `log(σ)` that prevents the model from zeroing out any component. The optimizer in `AgenticBrain` covers both model weights and the loss-balancing parameters.
+### 2. SSL Loss Wired (`BAA/brain.py`)
+`train_on_buffer()` now samples a second "unlabeled" batch from the replay buffer and runs a `no_grad` forward pass to collect its routing trace. This trace is passed as `unlabeled_routing_trace` to the `DTTLossEngine`, activating the path-consistency SSL loss (component 3) for the first time. Previously this code path was architecturally present but never triggered.
 
-### 3. Decoupled Inference and Training Threads (`BAA/baa_interface.py`)
-- **`_episode_queue`**: `record_experience()` posts completed episodes here and returns immediately — no blocking during training.
-- **`_training_loop`**: daemon thread that drains the queue, calls `on_episode_finish` and `train_on_buffer`, holding `_weight_lock` only during that window.
-- **`_weight_lock`**: separates weight reads (inference) from weight writes (optimizer step).
-- **`_traj_lock`**: lightweight lock for the trajectories dict only, independent of weight access.
-- Added `get_training_status()` for monitoring queue depth, episode count, and recent metrics.
+### 3. Training Thread Watchdog (`BAA/baa_interface.py`)
+- `_last_heartbeat`: timestamp updated every iteration by the training thread.
+- `_check_watchdog()`: called from `get_action()` on every inference step. If the training thread has been silent for > 60 s or has died, it is automatically restarted via `_restart_training_thread()`.
+- `get_training_status()` now exposes `thread_alive` and `last_heartbeat_age_s` for monitoring.
+
+### 4. Multi-Step Sequence Replay (`BAA/orchestrator.py`)
+Replaced `ReplayBuffer` with `PrioritizedSequenceReplayBuffer`. Instead of storing individual timestep transitions, the buffer now creates **overlapping windows of length 8** from each episode. Each window is stored as `[1, 8, dim]`. This gives the Transformer and RoPE attention real temporal context during training (previously they only saw sequences at inference time).
+
+### 5. Prioritized Experience Replay (`BAA/orchestrator.py`)
+`PrioritizedSequenceReplayBuffer.sample()` returns `(samples, indices)` using **proportional priority sampling** (`P(i) ∝ priority_i^0.6`). New transitions receive maximum priority. After each training step, `brain.train_on_buffer()` computes per-sample action losses and calls `update_priorities(indices, losses)` so surprising transitions are sampled more frequently.
+
+### 6. Automated Pruning (`BAA/orchestrator.py`, `BAA/brain.py`)
+`RoutingTracker` maintains a running mean of `P(Right)` for every `(layer, node)` pair. After 100 observations, nodes whose mean stays above 0.95 or below 0.05 are automatically frozen via `AgenticDTT.freeze_node()`. The tracker is updated from `train_on_buffer()` after every training step and pruning happens in-line via `check_auto_prune()`.
+
+### 7. Benchmark Script (`BAA/benchmark.py`)
+`python3 BAA/benchmark.py [--episodes 100] [--seed 42]` runs BAA and a random-policy baseline head-to-head on Pendulum-v1 (continuous action, no MuJoCo license required). Prints per-episode rewards, a summary table, and a learning trend (second-half vs first-half mean) to quantify whether BAA improves during the run.
+
+### Prior Improvements
+- **Real Hindsight Experience Replay** (`hindsight.py`): two samples per episode (original + hindsight re-goal).
+- **Learned Loss Balancing** (`loss.py`): 6 learnable `log_sigma` parameters via Kendall et al. 2018.
+- **Decoupled Inference/Training Threads** (`baa_interface.py`): episode queue, `_weight_lock`, `_traj_lock`.
 
 ## Dependencies
 

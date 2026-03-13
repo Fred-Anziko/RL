@@ -17,19 +17,25 @@ class HindsightRelabeler:
 
     inputs:
         - gamma: Discount factor for future rewards
+        - rtg_clamp: Maximum absolute RTG value to prevent attention destabilization
     outputs:
         - list of training samples (dicts), one original + one hindsight per episode
     """
 
-    def __init__(self, gamma=1.0):
+    def __init__(self, gamma=1.0, rtg_clamp=100.0):
         self.gamma = gamma
+        self.rtg_clamp = rtg_clamp
 
     def compute_rtg(self, rewards_tensor, override_total=None):
         """
         Calculates Reward-to-Go for every timestep.
 
-        If override_total is provided, it is used as the RTG at t=0 and the
+        If override_total is provided, it is used as the target RTG at t=0 and the
         per-step values are scaled proportionally (hindsight re-goal).
+
+        After any rescaling, values are clamped to [-rtg_clamp, rtg_clamp] to prevent
+        near-zero episode totals from producing enormous scale factors that would
+        destabilize cross-attention layers.
 
         rewards_tensor: [seq_len]
         override_total: float or None
@@ -47,6 +53,11 @@ class HindsightRelabeler:
         if override_total is not None and abs(running_return) > 1e-8:
             scale = override_total / running_return
             rtg_buffer = rtg_buffer * scale
+
+        # Clamp to prevent extreme values from destabilizing attention layers.
+        # This matters most when an episode has near-zero cumulative reward and
+        # the hindsight scale factor blows up.
+        rtg_buffer = rtg_buffer.clamp(-self.rtg_clamp, self.rtg_clamp)
 
         return rtg_buffer
 
@@ -79,7 +90,6 @@ class HindsightRelabeler:
         rewards_tensor = torch.tensor(reward_list, dtype=torch.float32, device=device)
 
         # --- Sample 1: Original trajectory ---
-        # RTG computed from actual rewards — this is what the agent was trying to achieve.
         original_rtg = self.compute_rtg(rewards_tensor)
 
         original_sample = {
@@ -91,9 +101,8 @@ class HindsightRelabeler:
         }
 
         # --- Sample 2: Hindsight-relabeled trajectory ---
-        # The actual total return becomes the new "goal" RTG at t=0.
-        # Every intermediate RTG is rescaled as if the agent always intended
-        # to reach this outcome. This is the core HER re-goal operation.
+        # The actual total return becomes the new goal RTG at t=0.
+        # Values are clamped inside compute_rtg to prevent instability.
         actual_total_return = float(rewards_tensor.sum())
         hindsight_rtg = self.compute_rtg(rewards_tensor, override_total=actual_total_return)
 
