@@ -9,13 +9,23 @@ class AgenticBrain:
     A 'full-stack' self-regulating brain that manages both 
     learning objectives and autonomous action selection.
     """
-    def __init__(self, model, lr=1e-4, loss_engine=None, curiosity_engine=None, optimizer=None, training_step=0,action_dim=None):
+    def __init__(self, model, lr=1e-4, loss_engine=None, curiosity_engine=None, optimizer=None, training_step=0, action_dim=None):
         self.model = model
         self.loss_engine = loss_engine if loss_engine else DTTLossEngine()
         self.curiosity_engine = curiosity_engine if curiosity_engine else CuriosityEngine(model)
-        self.optimizer = optimizer if optimizer else torch.optim.AdamW(model.parameters(), lr=lr)
-        self.training_step = training_step  # Track to reduce overfitting to early random experiences
-        self.action_dim = action_dim if action_dim is not None else model.policy_head.out_features  # Get action dim from model
+        self.training_step = training_step
+        self.action_dim = action_dim if action_dim is not None else model.policy_head.out_features
+
+        # Optimizer covers both model weights AND the learned loss-balancing log_sigmas.
+        # The log_sigma parameters live in loss_engine and have much smaller scale,
+        # so we use a slightly higher lr for them via a separate param group.
+        if optimizer is not None:
+            self.optimizer = optimizer
+        else:
+            self.optimizer = torch.optim.AdamW([
+                {"params": model.parameters(), "lr": lr},
+                {"params": self.loss_engine.parameters(), "lr": lr * 10},
+            ])
 
     def act(self, state, rtg, explore=True, episode_num=1,start_epsilon=0.5,min_epsilon=0.05,decay_rate=0.9994):
         """

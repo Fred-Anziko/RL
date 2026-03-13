@@ -224,17 +224,24 @@ class AgenticDTT(nn.Module):
     def on_episode_finish(self, raw_episode_data):
         """
         Process and store episode data into the replay buffer with Hindsight Relabeling.
+
+        The relabeler returns a list of samples: [original, hindsight].
+        Both are pushed to the replay buffer so the model learns from the
+        original intended goal AND the re-labeled achieved goal.
+
         Inputs:
-            - raw_episode_data: Raw episode data dictionary
+            - raw_episode_data: List of (state, action, reward) tuples
         Outputs:
             - None
         """
         if not raw_episode_data:
             return
         relabeler = HindsightRelabeler()
-        corrected_data = relabeler.relabel_episode(raw_episode_data)
-        if corrected_data:
-            self.replay_buffer.push(corrected_data["states"], corrected_data["actions"], corrected_data["rtg"])
+        samples = relabeler.relabel_episode(raw_episode_data)
+        if not samples:
+            return
+        for sample in samples:
+            self.replay_buffer.push(sample["states"], sample["actions"], sample["rtg"])
 
     def freeze_node(self, layer_idx, node_id, direction="left"):
         """
