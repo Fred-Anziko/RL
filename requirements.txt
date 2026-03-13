@@ -70,3 +70,6 @@ tzdata==2025.3
 urllib3==2.6.3
 uvicorn==0.40.0
 zipp==3.23.0
+fastapi
+streamlit
+uvicorn
