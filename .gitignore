@@ -1,3 +1,5 @@
 .rlenv
 __pycache__
 .DS_Store
+.replit
+.pt
